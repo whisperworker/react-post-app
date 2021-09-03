@@ -1,8 +1,8 @@
-import React, {useState} from "react";
+import React, {useMemo, useState} from "react";
 import './styles/App.css';
 import PostList from "./components/PostList";
 import PostForm from "./components/PostForm";
-import MySelect from "./components/UI/select/MySelect";
+import PostFilter from "./components/PostFilter";
 
 
 function App() {
@@ -11,8 +11,28 @@ function App() {
         {id: 3, title: "JS Hooks", body: 'JavaScript - Язык программирования'},
         {id: 2, title: "Ajax principles", body: 'Ajax - принцип...'},
     ])
-    const [selectedSort, setSelectedSort] = useState('')
+    const [filter, setFilter] = useState({sort: '', query: ''})
 
+
+    /*Отрабатывает только тогда когда удаляем,
+    добавляем, либо меняем алгоритм сортировки*/
+    const sortedPosts = useMemo(() => {
+        console.log('123')
+        /*Валидация выбранного элемента*/
+        if (filter.sort) {
+            /*Мутируем копию массива
+            а не мутируем состояние на прямую*/
+            return [...posts].sort((a, b) => a[filter.sort].localeCompare(b[filter.sort]))
+        }
+        return posts
+    }, [filter.sort, posts])
+
+    /*Поиск и сортировка*/
+    const sortedAndSearchedPosts = useMemo(() => {
+        /*Фильтруем посты по заданному SearchQuery в инпуте*/
+        return sortedPosts.filter(post => post.title.toLowerCase().includes(filter.query))
+    }, [filter.query, sortedPosts])
+    
     /*Функция на вход ожидает созданный post
     который создается в компоненте postForm*/
     const createPost = (newPost) => {
@@ -27,38 +47,21 @@ function App() {
         setPosts(posts.filter(p => p.id !== post.id))
     }
 
-    /*На вход функция получает выбранный
-    элемент и взаимодействует с ним*/
-    const sortPosts = (sort) => {
-        setSelectedSort(sort);
-        /*Мутируем копию массива
-        а не мутируем состояние на прямую*/
-        setPosts([...posts].sort((a, b) => a[sort].localeCompare(b[sort])))
-    }
-
     return (
         <div className="App">
             {/*Передаем в компонент PostForm функцию обратного вызова*/}
             <PostForm create={createPost}/>
             <hr style={{margin: '15px 0'}}/>
-            <div>
-                {/*Передаем все необходимые пропсы в MySelect*/}
-                <MySelect
-                    value={selectedSort}
-                    onChange={sortPosts}
-                    defaultValue="Сортировка по..."
-                    option={[
-                        {value: 'title', name: 'По названию'},
-                        {value: 'body', name: 'По описанию'},
-                    ]}
-                />
-            </div>
+            <PostFilter
+                filter={filter}
+                setFilter={setFilter}
+            />
             {/*Условная отрисовка*/}
-            {posts.length !== 0 ?
+            {sortedAndSearchedPosts.length !== 0 ?
                 /*Передаем в PostList функцию обратного вызова
                 Так же в компонент PostList передаем все посты
                 и заголовок для отображения на странице*/
-                <PostList remove={removePost} posts={posts} title="Посты про JS"/>
+                <PostList remove={removePost} posts={sortedAndSearchedPosts} title="Посты про JS"/>
                 :
                 <h1 style={{textAlign: 'center'}}>
                     Посты не были найдены!
